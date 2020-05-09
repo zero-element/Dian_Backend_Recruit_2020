@@ -1,0 +1,4 @@
+/app/config/
+/.vscode
+*.py[cod]
+unit_test.py
