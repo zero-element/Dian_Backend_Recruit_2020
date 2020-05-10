@@ -1,6 +1,7 @@
 from flask import Flask, request, g
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager
 from sqlalchemy.orm import sessionmaker
 
 from os import path
@@ -10,6 +11,7 @@ from contextlib import contextmanager
 
 login_manager = LoginManager()
 db = SQLAlchemy()
+jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
@@ -27,6 +29,8 @@ def create_app():
     from .models import auth
     login_manager.session_protection = 'strong'
     login_manager.init_app(app)
+    #初始化jwt
+    jwt.init_app(app)
     #初始化router
     from . import api
     app.register_blueprint(api.auth_router, url_prefix='/auth')
@@ -36,8 +40,9 @@ def create_app():
     return app
 
 @contextmanager
-def session_maker(schema):
+def get_session(schema=''):
     try:
+        schema = schema or g.country
         engine = db.get_engine(bind=schema)
         DBSession = sessionmaker(bind=engine)
         session = DBSession()
@@ -52,4 +57,3 @@ def session_maker(schema):
 def before():
     country = request.args.get('blog_type') or 'china'
     g.country = country
-    print(g.country)
