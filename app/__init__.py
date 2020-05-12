@@ -1,10 +1,10 @@
-from flask import Flask, request, g
+from flask import Flask, request, jsonify, g
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from sqlalchemy.orm import sessionmaker
 
-from os import path
+import os
 from datetime import datetime
 from contextlib import contextmanager
 
@@ -12,6 +12,8 @@ from contextlib import contextmanager
 login_manager = LoginManager()
 db = SQLAlchemy()
 jwt = JWTManager()
+sessions = {}
+os.chdir(os.path.join(os.getcwd(), 'app'))
 
 def create_app():
     app = Flask(__name__)
@@ -21,10 +23,13 @@ def create_app():
     from .models import database
     db.init_app(app)
     with app.app_context():
-        db.create_all(bind='china')
-        db.create_all(bind='usa')
-        database.Base.metadata.create_all(db.get_engine(bind='china'))
-        database.Base.metadata.create_all(db.get_engine(bind='usa'))
+        for country in app.config['SQLALCHEMY_BINDS']:
+            db.create_all(bind=country)
+            engine = db.get_engine(bind=country)
+            # database.Base.metadata.drop_all(engine)
+            database.Base.metadata.create_all(engine)
+            DBSession = sessionmaker(bind=engine)
+            sessions[country] = DBSession()
     #初始化login
     from .models import auth
     login_manager.session_protection = 'strong'
@@ -35,6 +40,7 @@ def create_app():
     from . import api
     app.register_blueprint(api.auth_router, url_prefix='/auth')
     app.register_blueprint(api.v1_router, url_prefix='/v1')
+    app.register_blueprint(api.img_router, url_prefix='/img')
     app.before_request(before)
 
     return app
@@ -43,17 +49,17 @@ def create_app():
 def get_session(schema=''):
     try:
         schema = schema or g.country
-        engine = db.get_engine(bind=schema)
-        DBSession = sessionmaker(bind=engine)
-        session = DBSession()
-        yield session
-        session.commit()
+        g.session = sessions[schema]
+        yield g.session
+        g.session.commit()
     except:
-        session.rollback()
+        g.session.rollback()
         raise
     finally:
-        session.close()
+        g.session.close()
 
 def before():
     country = request.args.get('blog_type') or 'china'
+    if not country in sessions:
+        return jsonify({'msg': '数据库不存在'}), 404
     g.country = country
