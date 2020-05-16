@@ -15,6 +15,7 @@ def add_identity(user):
 
 @jwt.claims_verification_loader
 def verify_country(claims):
+    # 验证blog_type
     if claims['country'] == g.country:
         return True
     else:

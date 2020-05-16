@@ -108,6 +108,7 @@ def create_comment(article_id):
         if article is None:
             return jsonify(NO_POST)
         if from_id is not None:
+            # 对评论回复
             from_comment = session.query(Comments)\
                                   .filter_by(id=from_id).one_or_none()
             if from_comment is not None and from_comment.article_id == article_id:
@@ -125,6 +126,7 @@ def create_comment(article_id):
             else:
                 return jsonify(NO_COMMENT)
         else:
+            # 对文章回复
             new_comment = Comments(article_id=article_id,
                                    user_id=user_id,
                                    comment_level=1,
@@ -166,11 +168,15 @@ def delete_comment(comment_id):
         comment = session.query(Comments)\
                          .filter_by(id=comment_id).one_or_none()
         if comment is not None:
+            # 是否具有删除权限
             if user_id == comment.user_id or user_id == comment.article.user_id:
+                # 是否是一级评论
                 if comment.comment_level == 1:
+                    # 一级评论则删除所有子评论
                     session.query(Comments)\
                            .filter_by(parent_cid=comment_id).delete()
                 else:
+                    # 否则父评论数量-1
                     parent_comment = session.query(Comments).filter_by(id=comment.parent_cid)
                     parent_comment.reply_num -= 1
                 session.delete(comment)
@@ -204,6 +210,7 @@ def top_comment(comment_id):
                          .filter_by(id=comment_id).one_or_none()
         if comment is not None:
             if user_id == comment.article.user_id:
+                # 状态取反
                 comment.top_status = not comment.top_status
                 return jsonify({'status': 200, 'msg': '操作成功'})
             else:

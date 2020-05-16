@@ -28,6 +28,7 @@ def get_username(uid:int, session):
         return user.username
     else:
         return ''
+
 def get_mimetype(filename:str):
     return mimetypes.guess_type(filename)[0]
 

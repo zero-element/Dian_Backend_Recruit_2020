@@ -21,6 +21,7 @@ def login():
         user = session.query(Users)\
                       .filter_by(username=username, password=utils.get_hash(password)).first()
         if user is not None:
+            # 有效期7天
             expires = datetime.timedelta(days=7)
             token = create_access_token(user, expires_delta=expires)
             return jsonify({'status': 200, 'msg': '登录成功',

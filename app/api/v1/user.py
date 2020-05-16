@@ -23,22 +23,6 @@ def get_user_list():
                                                                  }
                                                                 for user in user_list]})
 
-""" # 获取自身信息
-@v1_router.route('/user/self', methods=['GET'])
-@jwt_required
-def get_self_info():
-    user_id = get_jwt_identity()
-
-    with get_session() as session:
-        user = session.query(Users).filter_by(id=user_id).one_or_none()
-        if user is not None:
-            return jsonify({'status': 200,
-                            'username': user.username,
-                            'introduction': user.introduction_html,
-                            'avatar': 'img/{}'.format(user.avatar)
-                            })
-        else:
-            return jsonify(NO_USER) """
 
 # 获取指定用户信息
 @v1_router.route('/user/<string:username>/info', methods=['GET'])
@@ -58,6 +42,7 @@ def get_user_info(username):
 @jwt_required
 def modify_user_avatar():
     json = request.get_json()
+    # 上传后传入文件名即可，返回时自动添加前缀
     avatar_name = json.get('avatar_name', 'avatar.jpg')
     user_id = get_jwt_identity()
 

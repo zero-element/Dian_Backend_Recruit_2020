@@ -2,12 +2,12 @@ from flask import Flask, request, jsonify, redirect, g
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 import os
 from datetime import datetime
 from contextlib import contextmanager
-from app.config.error import NO_DB
+from app.config.error import NO_DB, ILLEGAL_REQUEST
 
 login_manager = LoginManager()
 db = SQLAlchemy()
@@ -30,7 +30,7 @@ def create_app():
             # database.Base.metadata.drop_all(engine)
             database.Base.metadata.create_all(engine)
             DBSession = sessionmaker(bind=engine)
-            sessions[country] = DBSession()
+            sessions[country] = scoped_session(DBSession)
     #初始化login
     from .models import auth
     login_manager.session_protection = 'strong'
@@ -79,6 +79,10 @@ def register_error(app):
     @app.errorhandler(404)
     def not_found_error(error):	
         return redirect('/', code=302)
+
+    @app.errorhandler(400)
+    def bad_request_error(error):	
+        return jsonify(ILLEGAL_REQUEST)
         
     @app.errorhandler(500)	
     def internal_error(error):

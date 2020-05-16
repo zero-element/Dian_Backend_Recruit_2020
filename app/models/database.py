@@ -51,8 +51,7 @@ class Articles(Base):
     author = relationship('Users', backref='articles')
     tags = relationship('Tags',
                         secondary=Article_tags,
-                        backref='articles',
-                        lazy='dynamic')
+                        backref='articles')
     category = Column(String(30), ForeignKey('categories.category'))
     category_ = relationship('Categories', backref='articles',
                              primaryjoin="Articles.category==Categories.category and Articles.user_id==Categories.user_id")

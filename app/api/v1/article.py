@@ -17,6 +17,7 @@ def get_article_list(username):
     with get_session() as session:
         user = session.query(Users).filter_by(username=username).one_or_none()
         if user is not None:
+            # 分词并构建查询
             word_list = [f'%{keyword}%' for keyword in search.split(' ')]
             rule = and_(*[Articles.content.like(w) for w in word_list])
             count = session.query(Articles.id).filter_by(
@@ -67,6 +68,7 @@ def get_article_detail(article_id):
         article = session.query(Articles)\
                          .filter_by(id=article_id).one_or_none()
         if article is not None:
+            # 只有前端访问时会获取详情，PV+1
             article.PV += 1
             return jsonify({'status': 200,
                             'aid': article.id,
@@ -95,7 +97,7 @@ def create_article():
         return jsonify(ILLEGAL_CONTENT)
     if title is None:
         return jsonify(ILLEGAL_TITLE)
-    summary = utils.get_summary(content)
+    summary = utils.get_summary(content) # 获取摘要
     user_id = get_jwt_identity()
 
     with get_session() as session:
@@ -135,6 +137,7 @@ def modify_article(article_id):
                 article.title = title or article.title
                 article.content = content or article.content
                 article.summary = summary if content else article.summary
+                # 修改tag
                 if tags is not None and type(tags) == list:
                     article.tags = []
                     for tag in tags:
@@ -142,6 +145,7 @@ def modify_article(article_id):
                     article.tags = session.query(Tags)\
                         .filter_by(user_id=user_id)\
                         .filter(Tags.tag.in_(tags)).all()
+                # 修改category
                 if category is not None and type(category) == str:
                     session.merge(Categories(
                         category=category, user_id=user_id))

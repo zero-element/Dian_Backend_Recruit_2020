@@ -17,6 +17,7 @@ ILLEGAL_CONTENT = {'status': 403, 'error': '内容不能为空'}
 ILLEGAL_CONTENT_TOLONG = {'status': 403, 'error': '内容过长'}
 ILLEGAL_TITLE = {'status': 403, 'error': '标题不能为空'}
 ILLEGAL_JWT = {'status': 401, 'error': 'token无效'}
+ILLEGAL_REQUEST = {'status': 400, 'error': '参数不合法'}
 
 EXPIRED_JWT = {'status': 401, 'error': 'token已过期'}
 
