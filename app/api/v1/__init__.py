@@ -1,1 +1,1 @@
-from . import article, collection, comment, friend, info
+from . import article, collection, comment, user

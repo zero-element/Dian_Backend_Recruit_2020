@@ -1,7 +1,7 @@
 from app import jwt
 from flask import jsonify, g
 from flask_jwt_extended import get_jwt_claims
-
+from app.config.error import ILLEGAL_JWT, ERROR_COUNTRY, EXPIRED_JWT
 
 @jwt.user_claims_loader
 def add_claims(user):
@@ -23,15 +23,18 @@ def verify_country(claims):
 
 @jwt.invalid_token_loader
 def invalid_token_callback(reason):
-    print('invalid')
-    return jsonify({'msg': '没有操作权限', 'reason': reason}), 401
+    return jsonify(ILLEGAL_JWT)
 
 
 @jwt.unauthorized_loader
 def unauthorized_callback(reason):
-    return jsonify({'msg': '没有操作权限', 'reason': reason}), 401
+    return jsonify(ILLEGAL_JWT)
 
 
 @jwt.claims_verification_failed_loader
 def invalid_claims_callback():
-    return jsonify({'msg': '没有操作权限', 'reason': 'Wrong country'}), 401
+    return jsonify(ERROR_COUNTRY)
+
+@jwt.expired_token_loader
+def expired_callback():
+    return jsonify(EXPIRED_JWT)

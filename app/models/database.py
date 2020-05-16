@@ -7,8 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import event
 from datetime import datetime
 from app import get_session
-from markdown import markdown
-import bleach
+from app.libs import markdown
 # 初始化Model的基类:
 Base = declarative_base()
 
@@ -19,8 +18,8 @@ Article_tags = Table('article_tags', Base.metadata,
                             primary_key=True),
                      Column('user_id', primary_key=True),
                      Column('tag', primary_key=True),
-                     ForeignKeyConstraint(['tag', 'user_id'], [
-                                          'tags.tag', 'tags.user_id'])
+                     ForeignKeyConstraint(['tag', 'user_id'],
+                                          ['tags.tag', 'tags.user_id'])
                      )
 
 
@@ -29,6 +28,9 @@ class Users(Base):
     id = Column(Integer, nullable=False, primary_key=True)
     username = Column(String(20), nullable=False)
     password = Column(String(64), nullable=False)
+    introduction = Column(UnicodeText, default='###没有填写个人介绍')
+    introduction_html = Column(UnicodeText, default='<h3>没有填写个人介绍</h3>')
+    avatar = Column(UnicodeText, default='avatar.jpg')
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -41,13 +43,16 @@ class Articles(Base):
     content = Column(UnicodeText, nullable=False)
     content_html = Column(UnicodeText, nullable=False)
     summary = Column(UnicodeText)
+    summary_html = Column(UnicodeText)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     create_time = Column(DateTime, default=datetime.now)
     modify_time = Column(DateTime)
+    PV = Column(Integer, nullable=False, default=0)
     author = relationship('Users', backref='articles')
     tags = relationship('Tags',
                         secondary=Article_tags,
-                        backref='articles')
+                        backref='articles',
+                        lazy='dynamic')
     category = Column(String(30), ForeignKey('categories.category'))
     category_ = relationship('Categories', backref='articles',
                              primaryjoin="Articles.category==Categories.category and Articles.user_id==Categories.user_id")
@@ -74,6 +79,7 @@ class Comments(Base):
     from_uid = Column(Integer)
     from_cid = Column(Integer)
     comment_level = Column(Integer, nullable=False, default=1)
+    reply_num = Column(Integer, nullable=False, default=0) # 仅对一级评论有效
     praise_num = Column(Integer, nullable=False, default=0)
     top_status = Column(Boolean, nullable=False, default=False)
     content = Column(UnicodeText, nullable=False)
@@ -104,6 +110,10 @@ class Categories(Base):
     def __repr__(self):
         return '<category %r>' % self.category
 
+
+
+from app.libs import utils
+
 # 自动删除article未使用的tag，tag为column，监听remove
 @event.listens_for(Articles.tags, 'remove')
 def delete_tag(mapper, connection, target):
@@ -127,20 +137,18 @@ def delete_orphan_delete(mapper, connection, target):
         if len(tag.articles) == 0:
             g.session.delete(tag)
 
+# markdown生成html
 @event.listens_for(Articles.content, 'set')
 @event.listens_for(Comments.content, 'set')
-def generate_html(target, value, oldvalue, initiator):
-    allow_tags = [
-        'a', 'abbr', 'acronym', 'b', 'blockquote', 'code', 'em', 'i', 'li',
-        'ol', 'pre', 'strong', 'ul', 'h1', 'h2', 'h3', 'p', 'img'
-    ]
-    target.content_html = bleach.linkify(
-        bleach.clean(
-            markdown(value, output_form='html'),
-            tags=allow_tags,
-            strip=True,
-            attributes={
-                '*': ['class'],
-                'a': ['href', 'rel'],
-                'img': ['src', 'alt'],  #支持<img src …>标签和属性
-            }))
+def generate_content_html(target, value, oldvalue, initiator):
+    target.content_html = markdown.get_html(value)
+
+
+@event.listens_for(Articles.summary, 'set')
+def generate_summary_html(target, value, oldvalue, initiator):
+    target.summary_html = markdown.get_html(value)
+
+
+@event.listens_for(Users.introduction, 'set')
+def generate_introduction_html(target, value, oldvalue, initiator):
+    target.introduction_html = markdown.get_html(value)

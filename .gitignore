@@ -1,5 +1,6 @@
-/app/config/
+/app/config/*
 /app/static/img
+!/app/config/error.py
 /.vscode
 *.py[cod]
 unit_test.py
